@@ -1,0 +1,6 @@
+id: c02_json_flag
+kind: clear
+prompt: 'Add a --json flag to cli.py that prints the result as {"total": <n>} instead of the text line. Keep the default output unchanged.'
+intent: >
+  cli.py gains --json; with it, stdout is exactly a JSON object {"total": n};
+  without it, output stays "Total: n".

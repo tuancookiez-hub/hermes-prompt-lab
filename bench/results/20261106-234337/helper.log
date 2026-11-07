@@ -1,0 +1,21 @@
+Plugin discord-tps: manifest 'capabilities' must be a list, got dict — ignoring
+Plugin hyatlas: unknown manifest field(s) ignored: provides_commands (newer manifest schema or typo; plugin still loads)
+Browser Use viewing unavailable: unsupported Hermes browser resolver
+Auxiliary call: request to https://inference-api.nousresearch.com/v1/ timed out after 180s (raise auxiliary.call.timeout for slow or reasoning models) on auto, trying fallback
+Auxiliary call: main provider nous is unavailable and no fallback_chain / fallback_providers is configured — refusing to guess another logged-in provider. Re-authenticate (`hermes model`) or declare a fallback.
+Auxiliary call: request timed out on auto and all fallbacks exhausted (fallback_chain + main agent model). Raising the primary error.
+Auxiliary call: request to https://inference-api.nousresearch.com/v1/ timed out after 180s (raise auxiliary.call.timeout for slow or reasoning models) on auto, trying fallback
+Auxiliary call: main provider nous is unavailable and no fallback_chain / fallback_providers is configured — refusing to guess another logged-in provider. Re-authenticate (`hermes model`) or declare a fallback.
+Auxiliary call: request timed out on auto and all fallbacks exhausted (fallback_chain + main agent model). Raising the primary error.
+Auxiliary call: request to https://inference-api.nousresearch.com/v1/ timed out after 180s (raise auxiliary.call.timeout for slow or reasoning models) on auto, trying fallback
+Auxiliary call: main provider nous is unavailable and no fallback_chain / fallback_providers is configured — refusing to guess another logged-in provider. Re-authenticate (`hermes model`) or declare a fallback.
+Auxiliary call: request timed out on auto and all fallbacks exhausted (fallback_chain + main agent model). Raising the primary error.
+Plugin discord-tps: manifest 'capabilities' must be a list, got dict — ignoring
+Plugin hyatlas: unknown manifest field(s) ignored: provides_commands (newer manifest schema or typo; plugin still loads)
+Browser Use viewing unavailable: unsupported Hermes browser resolver
+Auxiliary call: request to https://inference-api.nousresearch.com/v1/ timed out after 180s (raise auxiliary.call.timeout for slow or reasoning models) on auto, trying fallback
+Auxiliary call: main provider nous is unavailable and no fallback_chain / fallback_providers is configured — refusing to guess another logged-in provider. Re-authenticate (`hermes model`) or declare a fallback.
+Auxiliary call: request timed out on auto and all fallbacks exhausted (fallback_chain + main agent model). Raising the primary error.
+Auxiliary call: request to https://inference-api.nousresearch.com/v1/ timed out after 180s (raise auxiliary.call.timeout for slow or reasoning models) on auto, trying fallback
+Auxiliary call: main provider nous is unavailable and no fallback_chain / fallback_providers is configured — refusing to guess another logged-in provider. Re-authenticate (`hermes model`) or declare a fallback.
+Auxiliary call: request timed out on auto and all fallbacks exhausted (fallback_chain + main agent model). Raising the primary error.

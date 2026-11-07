@@ -1,0 +1,6 @@
+id: c01_fix_tests
+kind: clear
+prompt: "Run the tests in this repo and fix whatever is failing."
+intent: >
+  Fix calc.divide so it returns true division (7/2 == 3.5) while still raising
+  ZeroDivisionError on zero. Do not edit or delete the tests.

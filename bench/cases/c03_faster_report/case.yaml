@@ -1,0 +1,7 @@
+id: c03_faster_report
+kind: vague
+prompt: "make the report faster"
+intent: >
+  Speed up build_report in report.py so bench.py finishes well under a second.
+  Output must stay byte-identical, including customer order (first-seen order).
+  No new dependencies. Only report.py should change.

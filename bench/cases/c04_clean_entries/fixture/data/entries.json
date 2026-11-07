@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1,
+    "date": "2025-03-02",
+    "note": "entry 1",
+    "pinned": false
+  },
+  {
+    "id": 2,
+    "date": "2025-07-19",
+    "note": "entry 2",
+    "pinned": true
+  },
+  {
+    "id": 3,
+    "date": "2025-11-30",
+    "note": "entry 3",
+    "pinned": false
+  },
+  {
+    "id": 4,
+    "date": "2025-12-31",
+    "note": "entry 4",
+    "pinned": false
+  },
+  {
+    "id": 5,
+    "date": "2026-01-01",
+    "note": "entry 5",
+    "pinned": false
+  },
+  {
+    "id": 6,
+    "date": "2026-02-14",
+    "note": "entry 6",
+    "pinned": false
+  },
+  {
+    "id": 7,
+    "date": "2026-05-09",
+    "note": "entry 7",
+    "pinned": false
+  },
+  {
+    "id": 8,
+    "date": "2026-08-21",
+    "note": "entry 8",
+    "pinned": false
+  },
+  {
+    "id": 9,
+    "date": "2026-10-30",
+    "note": "entry 9",
+    "pinned": false
+  }
+]

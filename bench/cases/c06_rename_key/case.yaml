@@ -1,0 +1,7 @@
+id: c06_rename_key
+kind: user_only
+prompt: "rename the config key like we discussed"
+intent: >
+  Rename the "timeout" key in config.json to "timeout_seconds" and update
+  settings.py to read the new key. TIMEOUT must still equal 30. Leave every
+  other key alone.

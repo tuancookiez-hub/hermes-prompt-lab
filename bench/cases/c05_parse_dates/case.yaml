@@ -1,0 +1,6 @@
+id: c05_parse_dates
+kind: project
+prompt: "add a function to parse the dates"
+intent: >
+  Add parse_date(text) to utils/dates.py that turns a DD/MM/YYYY string into a
+  datetime.date (inverse of format_date), standard library only.

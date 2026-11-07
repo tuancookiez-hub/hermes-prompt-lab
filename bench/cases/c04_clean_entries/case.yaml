@@ -1,0 +1,7 @@
+id: c04_clean_entries
+kind: vague
+prompt: "clean up the old entries"
+intent: >
+  In data/entries.json, remove entries dated before 2026-01-01, except pinned
+  entries, which are always kept. Keep the file and every other entry unchanged.
+  Do not delete the file or create a new store.
