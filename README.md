@@ -4,6 +4,8 @@ Rewrites a normal request as a clearer prompt for an AI agent, in a voice you ch
 
 ![Typing a request, pressing the sparkle, then switching the voice in Settings and rewriting again](assets/demo.gif)
 
+The recording is from 0.3.0, so its voice list shows `friendly` and `expert`, which 0.5.0 replaced with `clarify` and `verify`.
+
 ## Install
 
 ```bash
@@ -34,11 +36,13 @@ Open Settings > Plugins > prompt-lab and choose a **Voice**. The command palette
 | `structured` (default) | Goal, Context, Steps, Constraints and Done when headings |
 | `concise` | One short, direct paragraph |
 | `detailed` | A full brief with requirements and edge cases |
-| `friendly` | A warm, polite request in plain sentences |
-| `expert` | A terse technical brief |
+| `clarify` | The request, then the questions the agent should ask you before it starts, instead of guessing |
+| `verify` | The request, then the proof the agent must show before it calls the work done |
 | `custom` | Your own words from **Custom voice** |
 
-The same request in three voices, from a real run on `tencent/hy4`:
+A setting saved as `friendly` or `expert`, which 0.5.0 removed, rewrites as `structured`.
+
+The same request in four voices, from real runs on `tencent/hy4`:
 
 **structured**
 
@@ -59,10 +63,26 @@ Done when:
 - The API is unchanged.
 ```
 
-**friendly**
+**clarify**
 
 ```text
-Hi, could you please fix the CSV export so it no longer drops the last row? Please don’t change the API.
+Fix the CSV export so it does not drop the last row, and do not change the API.
+
+Before you start, ask me:
+- Which CSV export is meant?
+- Should the existing API behavior stay exactly as it is?
+```
+
+**verify**
+
+```text
+Fix the CSV export so it no longer drops the last row, and do not change the API.
+
+Prove it:
+- Reproduce the missing last row before the fix.
+- Show a test that fails before the change and passes after.
+- Show the CSV export output includes the last row.
+- Show the API remains unchanged.
 ```
 
 **custom**, with *Write like a product manager briefing an engineer, and end with one line saying what done looks like.*

@@ -1,6 +1,6 @@
 name: prompt-lab
-version: "0.4.0"
-description: "A button beside Send and a /promptlab command that rewrite a normal request as a clearer prompt, in a voice you choose under Settings > Plugins > prompt-lab: structured, concise, detailed, friendly, expert, or your own words. It never sends for you, and Undo restores your draft. Disclosure: each rewrite is one extra stateless call to your configured model, at your provider's cost, with reasoning turned off by default. Only your request and your chosen voice are sent. No session is created, no tools run and no files are read. Rewrites made with /promptlab are logged locally in Hermes plugin storage. No background work, telemetry or third-party network calls of its own."
+version: "0.5.0"
+description: "A button beside Send and a /promptlab command that rewrite a normal request as a clearer prompt, in a voice you choose under Settings > Plugins > prompt-lab: structured, concise, detailed, clarify, verify, or your own words. It never sends for you, and Undo restores your draft. Disclosure: each rewrite is one extra stateless call to your configured model, at your provider's cost, with reasoning turned off by default. Only your request and your chosen voice are sent. No session is created, no tools run and no files are read. Rewrites made with /promptlab are logged locally in Hermes plugin storage. No background work, telemetry or third-party network calls of its own."
 author: tuancookiez-hub
 license: MIT
 requires_hermes: ">=0.23.0"
@@ -12,10 +12,10 @@ capabilities: []
 config_schema:
   voice:
     type: str
-    choices: [structured, concise, detailed, friendly, expert, custom]
+    choices: [structured, concise, detailed, clarify, verify, custom]
     default: structured
     label: Voice
-    description: "How rewrites read. structured: Goal, Context, Steps headings. concise: one short paragraph. detailed: a full brief with edge cases. friendly: a warm, polite ask. expert: a terse technical brief. custom: uses Custom voice below."
+    description: "How rewrites read. structured: Goal, Context, Steps headings. concise: one short paragraph. detailed: a full brief with edge cases. clarify: asks you its open questions instead of guessing. verify: tells the agent what proof to show when done. custom: uses Custom voice below."
   custom_voice:
     type: str
     default: ""

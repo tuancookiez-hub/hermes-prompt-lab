@@ -23,8 +23,12 @@ Under Context, Constraints and Done when, write "- " bullets. Under Steps, write
     "concise": "Write one short, direct paragraph of two to four sentences. No headings and no lists.",
     "detailed": """Write a thorough brief with these headings, in this order: Goal, Context, Requirements, Edge cases, Done when.
 Use "- " bullets under each. Spell out what a careful engineer would need to know, but add no features the user did not ask for.""",
-    "friendly": "Write in a warm, conversational tone, as a polite colleague asking for help. Use plain sentences and at most one short list.",
-    "expert": "Write as a terse senior engineer briefing another expert. Use precise technical terms, short imperative bullets and no filler.",
+    "clarify": """State the request in one or two plain sentences. In this voice, never state an assumption, even where the rules below say to.
+Then add the line "Before you start, ask me:" and one to three short "- " questions about what the request leaves open and would change the work, such as which part is meant, how far to go, or what must stay as it is.
+Leave the questions out only when the request already settles all of that.""",
+    "verify": """State the request in one or two plain sentences.
+Then add the line "Prove it:" and two to four "- " bullets naming the evidence the agent must show before calling the work done, such as reproducing the problem first, a test that fails before the change and passes after, or the output of a command.
+Ask only for evidence that fits this request.""",
 }
 
 BASE = """Rewrite the user's request as a clearer prompt for an AI agent.

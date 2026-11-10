@@ -52,7 +52,7 @@ def test_default_voice_is_structured():
     assert "Goal: one sentence" in system_of(llm)
 
 
-@pytest.mark.parametrize("voice", ["concise", "detailed", "friendly", "expert"])
+@pytest.mark.parametrize("voice", ["concise", "detailed", "clarify", "verify"])
 def test_each_voice_changes_the_instructions(voice):
     llm = FakeLlm("ok then")
     E.enhance(llm, "please fix the thing", voice=voice)
@@ -68,6 +68,11 @@ def test_custom_voice_uses_the_users_words():
 @pytest.mark.parametrize("voice,custom", [("custom", "   "), ("nonsense", ""), (None, None)])
 def test_empty_custom_or_unknown_voice_falls_back_to_structured(voice, custom):
     assert E.voice_text(voice, custom) == E.VOICES["structured"]
+
+
+@pytest.mark.parametrize("voice", ["friendly", "expert"])
+def test_a_voice_removed_in_0_5_falls_back_to_structured(voice):
+    assert E.voice_text(voice) == E.VOICES["structured"]
 
 
 def test_custom_voice_is_capped():

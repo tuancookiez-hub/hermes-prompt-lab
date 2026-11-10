@@ -84,10 +84,10 @@ test("a chat the gateway no longer knows retries without it", async () => {
 });
 
 test("the voice saved in Settings shapes the instructions", async () => {
-  app.settings = { voice: "friendly" };
+  app.settings = { voice: "clarify" };
   run();
   await settle();
-  assert.match(calls()[0].params.instructions, /warm, conversational tone/);
+  assert.match(calls()[0].params.instructions, /Before you start, ask me:/);
   assert.doesNotMatch(calls()[0].params.instructions, /Goal: one sentence/);
 });
 
