@@ -84,3 +84,11 @@ def test_only_the_request_is_sent():
     llm = FakeLlm("Goal: x")
     E.enhance(llm, "add a date parser")
     assert llm.calls[0][0][1]["content"] == "REQUEST:\nadd a date parser"
+
+
+def test_desktop_button_uses_the_same_instructions():
+    import json
+    source = (ROOT / "desktop" / "plugin.js").read_text(encoding="utf-8")
+    block = source.split("/* prompts:start */")[1].split("/* prompts:end */")[0]
+    prompts = json.loads(block.strip().removeprefix("const PROMPTS =").strip().rstrip(";"))
+    assert prompts == {"base": E.BASE, "voices": E.VOICES}

@@ -10,21 +10,29 @@ const plugin = (await import("../desktop/plugin.js")).default;
 let run;
 let openVoice;
 let button;
+let settingsChanged;
 let disposers = [];
-plugin.register({
-  onDispose: (fn) => disposers.push(fn),
-  setInterval: () => () => {},
-  registerMany: (items) => {
-    run = items.find((item) => item.id === "palette").data.run;
-    openVoice = items.find((item) => item.id === "palette-voice").data.run;
-    button = items.find((item) => item.id === "rewrite-button");
-  },
-});
+function load() {
+  plugin.register({
+    onDispose: (fn) => disposers.push(fn),
+    onEvent: (name, fn) => {
+      if (name === "plugin.prompt-lab.settings.changed") settingsChanged = fn;
+    },
+    setInterval: () => () => {},
+    registerMany: (items) => {
+      run = items.find((item) => item.id === "palette").data.run;
+      openVoice = items.find((item) => item.id === "palette-voice").data.run;
+      button = items.find((item) => item.id === "rewrite-button");
+    },
+  });
+}
+load();
 
 const REWRITE = "Goal: Fix the login.";
-const ok = (prompt = REWRITE) => async () => ({ output: JSON.stringify({ ok: true, prompt, changed: true, note: "" }) });
+const ok = (text = REWRITE) => async () => ({ text });
 const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
 const lastNotice = () => app.notices.at(-1)?.message ?? "";
+const calls = () => app.requests.filter((request) => request.method === "llm.oneshot");
 
 function buttons() {
   const root = button.render().type({});
@@ -35,80 +43,90 @@ const undoButton = () => buttons().find((props) => props.label === "Undo rewrite
 
 beforeEach(() => {
   disposers.forEach((dispose) => dispose());
-  Object.assign(app, { cwd: "", profile: "", sessionId: "s1", draft: "fix the login page", requests: [], notices: [], navigations: [], respond: ok(), acceptDraft: true, detachFails: false, staleRevision: false });
+  disposers = [];
+  load();
+  Object.assign(app, { profile: "", sessionId: "s1", draft: "fix the login page", requests: [], notices: [], navigations: [], settings: {}, settingsFail: false, respond: ok(), acceptDraft: true });
 });
 
-test("an open chat rewrites through /promptlab and never sends", async () => {
+test("a rewrite is one stateless model call and never sends", async () => {
   run();
   await settle();
   assert.equal(app.draft, REWRITE);
-  assert.equal(app.requests.length, 1);
-  assert.deepEqual(app.requests[0].params, { session_id: "s1", command: "/promptlab --json fix the login page" });
+  assert.deepEqual(app.requests.map((request) => request.method), ["plugins.manage", "llm.oneshot"]);
+  const { instructions, ...rest } = calls()[0].params;
+  assert.deepEqual(rest, { session_id: "s1", input: "REQUEST:\nfix the login page", task: "prompt_lab", temperature: 0.2, max_tokens: 1200 });
+  assert.match(instructions, /Goal: one sentence/);
+  assert.doesNotMatch(instructions, /\{voice\}/);
 });
 
-test("a new chat runs in a hidden session, then ends and deletes it", async () => {
-  app.sessionId = null;
-  app.cwd = "E:/project";  // project folders are no longer sent
-  run();
-  await settle();
-  assert.equal(app.draft, REWRITE);
-  assert.deepEqual(app.requests.map((request) => request.method), ["session.create", "slash.exec", "session.detach", "session.mutate"]);
-  assert.deepEqual(app.requests[0].params, { hidden: true });
-  assert.equal(app.requests[1].params.session_id, "hidden");
-  assert.deepEqual(app.requests[2].params, { session_id: "hidden", subscription_id: "sub", end_reason: "prompt_lab_done" });
-  const { request_id: requestId, ...removal } = app.requests[3].params;
-  assert.ok(requestId);
-  assert.deepEqual(removal, { session_id: "stored", expected_revision: 3, expected_generation: 1, operation: "delete", payload: {} });
-});
-
-test("a hidden session that won't end is not deleted, and the rewrite still lands", async () => {
-  app.sessionId = null;
-  app.detachFails = true;
-  run();
-  await settle();
-  assert.equal(app.draft, REWRITE);
-  assert.equal(app.requests.at(-1).method, "session.detach");
-  assert.equal(app.notices.length, 0);
-});
-
-test("a stale revision is retried once with the one Hermes names", async () => {
-  app.sessionId = null;
-  app.staleRevision = true;
-  run();
-  await settle();
-  const removals = app.requests.filter((request) => request.method === "session.mutate");
-  assert.equal(removals.length, 2);
-  assert.equal(removals[1].params.expected_revision, 5);
-  assert.equal(removals[1].params.expected_generation, 2);
-});
-
-test("the hidden session opens in the profile on screen", async () => {
+test("a new chat needs no session at all", async () => {
   app.sessionId = null;
   app.profile = "work";
   run();
   await settle();
   assert.equal(app.draft, REWRITE);
-  assert.deepEqual(app.requests.map((request) => request.params.profile), ["work", "work", "work", "work"]);
+  assert.deepEqual(app.requests.map((request) => request.method), ["plugins.manage", "llm.oneshot"]);
+  assert.equal(app.requests[0].params.profile, "work");
+  assert.equal(calls()[0].params.profile, "work");
+  assert.equal("session_id" in calls()[0].params, false);
 });
 
-test("the hidden session is removed when the rewrite fails", async () => {
-  app.sessionId = null;
-  app.respond = async () => ({ output: JSON.stringify({ ok: false, error: "provider down" }) });
-  run();
-  await settle();
-  assert.deepEqual(app.requests.slice(-2).map((request) => request.method), ["session.detach", "session.mutate"]);
-  assert.equal(app.draft, "fix the login page");
-});
-
-test("a session the gateway no longer knows falls back to a hidden session", async () => {
+test("a chat the gateway no longer knows retries without it", async () => {
   app.respond = async (_method, params) => {
-    if (params.session_id === "s1") throw new Error("session not found");
+    if (params.session_id) throw new Error("session not found");
     return ok()();
   };
   run();
   await settle();
   assert.equal(app.draft, REWRITE);
-  assert.deepEqual(app.requests.map((request) => request.method), ["slash.exec", "session.create", "slash.exec", "session.detach", "session.mutate"]);
+  assert.equal(calls().length, 2);
+  assert.equal("session_id" in calls()[1].params, false);
+});
+
+test("the voice saved in Settings shapes the instructions", async () => {
+  app.settings = { voice: "friendly" };
+  run();
+  await settle();
+  assert.match(calls()[0].params.instructions, /warm, conversational tone/);
+  assert.doesNotMatch(calls()[0].params.instructions, /Goal: one sentence/);
+});
+
+test("a custom voice uses the user's own words, kept literal", async () => {
+  app.settings = { voice: "custom", custom_voice: "Sound like a pirate. Costs $& more." };
+  run();
+  await settle();
+  assert.match(calls()[0].params.instructions, /written by the user: Sound like a pirate\. Costs \$& more\./);
+});
+
+test("an empty custom voice falls back to structured", async () => {
+  app.settings = { voice: "custom", custom_voice: "  " };
+  run();
+  await settle();
+  assert.match(calls()[0].params.instructions, /Goal: one sentence/);
+});
+
+test("settings are read once, then again after a save", async () => {
+  run();
+  await settle();
+  app.draft = "fix the login page";
+  run();
+  await settle();
+  assert.equal(app.requests.filter((request) => request.method === "plugins.manage").length, 1);
+  app.settings = { voice: "concise" };
+  settingsChanged();
+  app.draft = "fix the login page";
+  run();
+  await settle();
+  assert.equal(app.requests.filter((request) => request.method === "plugins.manage").length, 2);
+  assert.match(calls().at(-1).params.instructions, /one short, direct paragraph/);
+});
+
+test("unreadable settings still rewrite, in the default voice", async () => {
+  app.settingsFail = true;
+  run();
+  await settle();
+  assert.equal(app.draft, REWRITE);
+  assert.match(calls()[0].params.instructions, /Goal: one sentence/);
 });
 
 test("an empty draft makes no model call", async () => {
@@ -125,6 +143,39 @@ test("slash commands are not rewritten", async () => {
   await settle();
   assert.equal(app.requests.length, 0);
   assert.equal(app.draft, "/goal ship it");
+});
+
+test("a two-word draft is too short and makes no model call", async () => {
+  app.draft = "fix login";
+  run();
+  await settle();
+  assert.equal(calls().length, 0);
+  assert.match(lastNotice(), /too short/);
+});
+
+test("a draft that is already structured is left alone in the structured voice", async () => {
+  app.draft = "Goal: fix it\nConstraints:\n- keep the API";
+  run();
+  await settle();
+  assert.equal(calls().length, 0);
+  assert.match(lastNotice(), /already structured/);
+  assert.equal(undoButton(), undefined);
+});
+
+test("another voice still rewrites a structured draft", async () => {
+  app.settings = { voice: "concise" };
+  app.draft = "Goal: fix it\nConstraints:\n- keep the API";
+  app.respond = ok("Fix it and keep the API.");
+  run();
+  await settle();
+  assert.equal(app.draft, "Fix it and keep the API.");
+});
+
+test("thinking tags and code fences are stripped from the reply", async () => {
+  app.respond = ok("<think>hm</think>\n```text\nGoal: Fix the login.\n```");
+  run();
+  await settle();
+  assert.equal(app.draft, REWRITE);
 });
 
 test("a draft edited during the rewrite is kept", async () => {
@@ -164,7 +215,8 @@ test("clicking while it runs cancels the rewrite", async () => {
 });
 
 test("a failed rewrite says so and keeps the draft", async () => {
-  app.respond = async () => ({ output: JSON.stringify({ ok: false, error: "provider down" }) });
+  app.sessionId = null;
+  app.respond = async () => { throw new Error("one-shot generation failed: provider down"); };
   run();
   await settle();
   assert.equal(app.draft, "fix the login page");
@@ -172,19 +224,19 @@ test("a failed rewrite says so and keeps the draft", async () => {
   assert.match(lastNotice(), /provider down/);
 });
 
-test("output that is not JSON means the agent side is not active", async () => {
-  app.respond = async () => ({ output: "Unknown command `/promptlab`." });
+test("an empty reply is an error, not a blank draft", async () => {
+  app.respond = ok("   ");
   run();
   await settle();
   assert.equal(app.draft, "fix the login page");
-  assert.match(lastNotice(), /isn't active in this profile/);
+  assert.match(lastNotice(), /returned no text/);
 });
 
-test("an unchanged result leaves the draft and offers no undo", async () => {
-  app.respond = async () => ({ output: JSON.stringify({ ok: true, prompt: "fix the login page", changed: false, note: "already structured" }) });
+test("a reply equal to the draft leaves it and offers no undo", async () => {
+  app.respond = ok("fix the login page");
   run();
   await settle();
-  assert.match(lastNotice(), /already structured/);
+  assert.match(lastNotice(), /Left unchanged/);
   assert.equal(undoButton(), undefined);
 });
 

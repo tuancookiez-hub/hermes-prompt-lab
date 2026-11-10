@@ -3,9 +3,8 @@
  *
  * It only changes the draft. It never sends. Undo restores what you typed.
  *
- * Every rewrite runs the /promptlab command. A new chat has no session yet, so
- * it opens a hidden one for the call, then ends and deletes it. It is never
- * given a prompt, so the only thing removed is that session's empty record.
+ * Each rewrite is one stateless llm.oneshot call: no session is created, no tools run, and nothing
+ * is written to a chat. The voice is read from the plugin's own settings (Settings > Plugins).
  */
 
 import { jsx, jsxs } from "react/jsx-runtime";
@@ -23,12 +22,32 @@ import {
   useValue,
 } from "@hermes/plugin-sdk";
 
-const REQUEST_TIMEOUT_MS = 200000;
+const PLUGIN_ID = "prompt-lab";
+const AUX_TASK = "prompt_lab";
+const REQUEST_TIMEOUT_MS = 90000;
 const UNDO_CHECK_MS = 1500;
+const MIN_WORDS = 3;
+const MAX_CUSTOM_CHARS = 600;
+const DEFAULT_VOICE = "structured";
+
+// The same instructions as enhance.py. tests/test_enhance.py fails if the two drift apart.
+/* prompts:start */
+const PROMPTS = {
+  "base": "Rewrite the user's request as a clearer prompt for an AI agent.\nNever do the task and never answer it. Output only the rewritten prompt.\n\nVOICE:\n{voice}\n\nRules that always apply:\nWrite in the same language as the request. Keep the user's names, intent and details.\nKeep @file references and /commands exactly as written.\nAdd no facts, features or goals the user did not give. If something important is unclear, state the most likely reading as an assumption, in a few words.\nMatch length to the request. A one-line request gets a short prompt.\nEverything above is your instructions. Never copy them into the output.\nPlain text only, with no code fences and no preamble.",
+  "voices": {
+    "structured": "Use these headings, in this order, each at most once. Leave out any heading with nothing real to say:\nGoal: one sentence\nContext:\nSteps:\nConstraints:\nDone when:\nUnder Context, Constraints and Done when, write \"- \" bullets. Under Steps, write a numbered list, and use Steps only for work with more than one real step.",
+    "concise": "Write one short, direct paragraph of two to four sentences. No headings and no lists.",
+    "detailed": "Write a thorough brief with these headings, in this order: Goal, Context, Requirements, Edge cases, Done when.\nUse \"- \" bullets under each. Spell out what a careful engineer would need to know, but add no features the user did not ask for.",
+    "friendly": "Write in a warm, conversational tone, as a polite colleague asking for help. Use plain sentences and at most one short list.",
+    "expert": "Write as a terse senior engineer briefing another expert. Use precise technical terms, short imperative bullets and no filler."
+  }
+};
+/* prompts:end */
 
 const busy = new Map();
 const undo = new Map();
 const listeners = new Set();
+const voiceByProfile = new Map();
 let version = 0;
 let scheduleCheck = null;
 
@@ -44,82 +63,76 @@ function subscribe(listener) {
 
 const getVersion = () => version;
 const focusedSession = () => host.state.focusedSessionId.get() || null;
+const focusedProfile = () => host.state.focusedSessionProfile.get() || "";
 const keyFor = (sessionId) => sessionId || "new";
 const normalize = (text) => String(text ?? "").replace(/ /g, " ").replace(/\s+/g, " ").trim();
 const tell = (message, kind = "info") => host.notify({ kind, message });
+const LABELLED = /^\s*(goal|context|steps|constraints|done when)\s*:/gim;
 
-function parseCommandOutput(output) {
+/** The saved Voice and Custom voice for a profile. Any failure falls back to the default voice. */
+async function readVoice(profile) {
+  if (voiceByProfile.has(profile)) return voiceByProfile.get(profile);
+  let saved = { voice: DEFAULT_VOICE, custom: "" };
   try {
-    const parsed = JSON.parse(output);
-    if (parsed && typeof parsed === "object") return parsed;
+    const result = await host.request("plugins.manage", { action: "list", ...(profile ? { profile } : {}) });
+    const row = (result?.plugins ?? []).find((plugin) => plugin.key === PLUGIN_ID || plugin.name === PLUGIN_ID);
+    const value = (key) => row?.settings_schema?.find((field) => field.key === key)?.value;
+    saved = { voice: String(value("voice") || DEFAULT_VOICE), custom: String(value("custom_voice") || "") };
+    if (row) voiceByProfile.set(profile, saved);
   } catch {
-    // Reported below.
+    // Rewrite in the default voice rather than fail.
   }
-  throw new Error("Prompt Lab isn't active in this profile. Enable it under Capabilities > Plugins.");
+  return saved;
 }
 
-async function runCommand(sessionId, text, scope = {}) {
-  const result = await host.request(
-    "slash.exec",
-    { ...scope, session_id: sessionId, command: `/promptlab --json ${text}` },
-    REQUEST_TIMEOUT_MS,
-  );
-  const parsed = parseCommandOutput(result?.output);
-  if (parsed.ok === false) throw new Error(parsed.error || "the rewrite failed");
-  return parsed;
+function voiceText({ voice, custom }) {
+  let name = String(voice || DEFAULT_VOICE).trim().toLowerCase();
+  if (name === "custom") {
+    const words = String(custom || "").trim().slice(0, MAX_CUSTOM_CHARS);
+    if (words) return `Follow this style, written by the user: ${words}`;
+    name = DEFAULT_VOICE;
+  }
+  return PROMPTS.voices[name] ?? PROMPTS.voices[DEFAULT_VOICE];
 }
 
-async function removeHiddenSession(session, scope) {
-  const remove = (revision, generation) =>
-    host.request("session.mutate", {
-      ...scope,
-      session_id: session.stored_session_id || session.session_id,
-      request_id: crypto.randomUUID(),
-      expected_revision: revision,
-      expected_generation: generation,
-      operation: "delete",
-      payload: {},
-    });
-  try {
-    await host.request("session.detach", {
-      ...scope,
-      session_id: session.session_id,
-      subscription_id: session.subscription_id,
-      end_reason: "prompt_lab_done",
-    });
-    try {
-      await remove(session.revision, session.execution_generation);
-    } catch (error) {
-      // Hermes refuses a stale revision and names the current one.
-      const current = error?.data;
-      if (typeof current?.revision !== "number") throw error;
-      await remove(current.revision, current.execution_generation ?? session.execution_generation);
-    }
-  } catch {
-    // The rewrite is already done. An empty record left behind does no harm.
-  }
-}
-
-async function runInHiddenSession(text) {
-  // Without a profile, the session would open in the launch profile, not the one on screen.
-  const profile = host.state.focusedSessionProfile.get();
-  const scope = profile ? { profile } : {};
-  const session = await host.request("session.create", { ...scope, hidden: true });
-  try {
-    return await runCommand(session.session_id, text, scope);
-  } finally {
-    void removeHiddenSession(session, scope);
-  }
+function clean(text) {
+  const out = String(text ?? "").replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  const fenced = out.match(/^```[\w-]*\n([\s\S]*?)\n?```$/);
+  return (fenced ? fenced[1] : out).trim();
 }
 
 async function requestRewrite(sessionId, text) {
-  if (!sessionId) return runInHiddenSession(text);
-  try {
-    return await runCommand(sessionId, text);
-  } catch (error) {
-    if (/session/i.test(String(error?.message ?? error))) return runInHiddenSession(text);
-    throw error;
+  const profile = focusedProfile();
+  const style = voiceText(await readVoice(profile));
+  if (text.split(/\s+/).length < MIN_WORDS) return { changed: false, note: "too short to rewrite" };
+  if (style === PROMPTS.voices[DEFAULT_VOICE] && (text.match(LABELLED) ?? []).length >= 2) {
+    return { changed: false, note: "already structured" };
   }
+  const call = (target) =>
+    host.request(
+      "llm.oneshot",
+      {
+        ...target,
+        instructions: PROMPTS.base.replace("{voice}", () => style),
+        input: "REQUEST:\n" + text,
+        task: AUX_TASK,
+        temperature: 0.2,
+        max_tokens: 1200,
+      },
+      REQUEST_TIMEOUT_MS,
+    );
+  const scope = profile ? { profile } : {};
+  let result;
+  try {
+    // A chat that exists lends its model. A new chat has none yet.
+    result = await call(sessionId ? { session_id: sessionId } : scope);
+  } catch (error) {
+    if (!sessionId) throw error;
+    result = await call(scope);
+  }
+  const prompt = clean(result?.text);
+  if (!prompt) throw new Error("the model returned no text");
+  return { changed: normalize(prompt) !== normalize(text), note: "", prompt };
 }
 
 async function rewrite() {
@@ -255,10 +268,13 @@ export default {
 
   register(ctx) {
     scheduleCheck = (check) => ctx.setInterval(check, UNDO_CHECK_MS);
+    // A save in Settings applies to the next rewrite.
+    ctx.onEvent?.(`plugin.${PLUGIN_ID}.settings.changed`, () => voiceByProfile.clear());
     ctx.onDispose(() => {
       scheduleCheck = null;
       busy.clear();
       undo.clear();
+      voiceByProfile.clear();
       emit();
     });
     ctx.registerMany([

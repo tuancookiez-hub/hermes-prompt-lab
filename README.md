@@ -77,14 +77,14 @@ Every voice keeps the language of your request, your names and details, and any 
 
 ## Model
 
-Rewrites run on the `prompt_lab` auxiliary task, which uses your main model by default. Reasoning is off by default, because long reasoning made short rewrites time out on `tencent/hy4`. Change either under `auxiliary.prompt_lab` in `config.yaml`.
+A rewrite in an open chat uses that chat's model. In a new chat, and for `/promptlab`, it runs on the `prompt_lab` auxiliary task, which uses your main model by default with reasoning off, because long reasoning made short rewrites time out on `tencent/hy4`. Change that under `auxiliary.prompt_lab` in `config.yaml`.
 
 ## What it does on your machine
 
 - **Model calls:** each rewrite is one extra call to your configured model, billed by your provider.
 - **Data sent to that model:** only your request and the voice instructions. No files are read.
-- **Hidden sessions:** in a new chat, the button opens a hidden Hermes session for the rewrite, then ends and deletes it. It is never given a prompt and stays out of your chat list. If that cleanup fails, one empty session record stays in the Hermes database, which does no harm.
-- **Local storage:** each request and its rewrite are saved in Hermes plugin storage. Your voice choice is saved in `config.yaml` under `plugins.entries.prompt-lab.settings`.
+- **No sessions or tools:** the button makes one stateless `llm.oneshot` call. It creates no session, runs no tools and writes nothing to a chat. In an open chat it uses that chat's model.
+- **Local storage:** your voice choice is saved in `config.yaml` under `plugins.entries.prompt-lab.settings`. Rewrites made with the `/promptlab` command are logged in Hermes plugin storage; button rewrites are not stored.
 - **Not used:** background work, telemetry, shell commands, and network calls of its own.
 
 ## Results so far
