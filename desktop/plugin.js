@@ -19,6 +19,7 @@ import {
   Tip,
   cn,
   host,
+  pluginSettingsHref,
   useValue,
 } from "@hermes/plugin-sdk";
 
@@ -275,6 +276,16 @@ export default {
           label: "Rewrite draft as a clearer prompt",
           keywords: ["prompt", "rewrite", "enhance", "structure"],
           run: () => void rewrite(),
+        },
+      },
+      {
+        id: "palette-voice",
+        area: PALETTE_AREA,
+        data: {
+          id: "prompt-lab.voice",
+          label: "Prompt Lab: choose voice",
+          keywords: ["prompt", "voice", "tone", "style", "settings"],
+          run: () => host.navigate(pluginSettingsHref("prompt-lab")),
         },
       },
       {

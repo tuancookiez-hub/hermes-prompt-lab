@@ -1,5 +1,5 @@
 name: prompt-lab
-version: "0.3.0"
+version: "0.3.1"
 description: "A button beside Send and a /promptlab command that rewrite a normal request as a clearer prompt, in a voice you choose under Settings > Plugins > prompt-lab: structured, concise, detailed, friendly, expert, or your own words. It never sends for you, and Undo restores your draft. Disclosure: each rewrite is one extra call to your configured model, at your provider's cost, with reasoning turned off by default. Only your request and your chosen voice are sent. In a new chat the button opens a hidden session for the rewrite, then ends and deletes it. Rewrites are stored locally in Hermes plugin storage. No background work or third-party network calls of its own."
 author: tuancookiez-hub
 license: MIT

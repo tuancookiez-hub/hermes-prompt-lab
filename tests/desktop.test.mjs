@@ -8,6 +8,7 @@ const { app } = await import("./desktop_sdk_stub.mjs");
 const plugin = (await import("../desktop/plugin.js")).default;
 
 let run;
+let openVoice;
 let button;
 let disposers = [];
 plugin.register({
@@ -15,6 +16,7 @@ plugin.register({
   setInterval: () => () => {},
   registerMany: (items) => {
     run = items.find((item) => item.id === "palette").data.run;
+    openVoice = items.find((item) => item.id === "palette-voice").data.run;
     button = items.find((item) => item.id === "rewrite-button");
   },
 });
@@ -33,7 +35,7 @@ const undoButton = () => buttons().find((props) => props.label === "Undo rewrite
 
 beforeEach(() => {
   disposers.forEach((dispose) => dispose());
-  Object.assign(app, { cwd: "", profile: "", sessionId: "s1", draft: "fix the login page", requests: [], notices: [], respond: ok(), acceptDraft: true, detachFails: false, staleRevision: false });
+  Object.assign(app, { cwd: "", profile: "", sessionId: "s1", draft: "fix the login page", requests: [], notices: [], navigations: [], respond: ok(), acceptDraft: true, detachFails: false, staleRevision: false });
 });
 
 test("an open chat rewrites through /promptlab and never sends", async () => {
@@ -205,4 +207,9 @@ test("undo keeps a rewrite the user went on to edit", async () => {
   await settle();
   assert.equal(app.draft, `${REWRITE} Also check Safari.`);
   assert.match(lastNotice(), /kept/);
+});
+
+test("the choose-voice command opens Prompt Lab's settings page", () => {
+  openVoice();
+  assert.deepEqual(app.navigations, ["/settings?tab=plugins&plugin=prompt-lab"]);
 });

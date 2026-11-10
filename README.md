@@ -25,7 +25,7 @@ In any other Hermes chat, use the command:
 
 ## Pick a voice
 
-Open Settings > Plugins > prompt-lab and choose a **Voice**. The next rewrite uses it, with no restart. Each profile keeps its own choice.
+Open Settings > Plugins > prompt-lab and choose a **Voice**. The command palette entry **Prompt Lab: choose voice** opens that page directly. The next rewrite uses it, with no restart. Each profile keeps its own choice.
 
 ![Prompt Lab's settings page with the Voice dropdown and the Custom voice field](assets/settings.png)
 

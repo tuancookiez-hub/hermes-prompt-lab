@@ -6,6 +6,7 @@ export const app = {
   draft: "",
   requests: [],
   notices: [],
+  navigations: [],
   respond: async () => ({}),
   acceptDraft: true,
   detachFails: false,
@@ -20,6 +21,7 @@ export const host = {
     focusedSessionProfile: { get: () => app.profile },
   },
   notify: (notice) => app.notices.push(notice),
+  navigate: (path) => app.navigations.push(path),
   request: (method, params) => {
     app.requests.push({ method, params });
     if (method === "session.create") {
@@ -55,3 +57,4 @@ export const Tip = "tip";
 export const COMPOSER_AREAS = { actions: "composer.actions" };
 export const KEYBINDS_AREA = "keybinds";
 export const PALETTE_AREA = "palette";
+export const pluginSettingsHref = (plugin) => `/settings?tab=plugins&plugin=${plugin}`;
